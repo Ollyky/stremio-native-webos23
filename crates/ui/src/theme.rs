@@ -40,7 +40,7 @@ const COOL_0: [f32; 4] = rgb8(0xf7, 0xfa, 0xfc);
 const COOL_50: [f32; 4] = rgb8(0xeb, 0xf0, 0xf7);
 const COOL_150: [f32; 4] = rgb8(0xdb, 0xe0, 0xeb);
 const COOL_200: [f32; 4] = rgb8(0xcd, 0xd3, 0xdd);
-const COOL_300: [f32; 4] = rgb8(0xb8, 0xbf, 0xcc);
+const COOL_300: [f32; 4] = rgb8(0xb9, 0xbd, 0xc2);
 const COOL_400: [f32; 4] = rgb8(0x94, 0x99, 0xa3);
 const COOL_700: [f32; 4] = rgb8(0x2e, 0x32, 0x3d);
 const COOL_850: [f32; 4] = rgb8(0x1f, 0x21, 0x29);
@@ -54,6 +54,8 @@ const COOL_900: [f32; 4] = rgb8(0x14, 0x17, 0x1c);
 const NEUTRAL_650: [f32; 4] = rgb8(0x0f, 0x0d, 0x20);
 const NEUTRAL_750: [f32; 4] = rgb8(0x0c, 0x0b, 0x11);
 const NEUTRAL_850: [f32; 4] = rgb8(0x14, 0x14, 0x16);
+// The reference concept's burgundy, reserved for the detail page's stream-list surface.
+const BURGUNDY_500: [f32; 4] = rgb8(0x50, 0x31, 0x32);
 const WHITE: [f32; 4] = rgb8(0xff, 0xff, 0xff);
 const BLACK: [f32; 4] = rgb8(0x00, 0x00, 0x00);
 
@@ -73,11 +75,10 @@ const CAPTION_28: [f32; 4] = rgb8(0x47, 0x47, 0x47);
 // Sand — one warm off-white, and it has exactly one job: the ambient wash's resting cast.
 const SAND_100: [f32; 4] = rgb8(0xe9, 0xe6, 0xe0);
 
-// Violet — Stremio's one accent, stremio-web `src/App/styles.less`
-// `--primary-accent-color: rgb(123, 91, 245)`. The focus fill and nothing decorative.
-const VIOLET_500: [f32; 4] = rgb8(0x7b, 0x5b, 0xf5);
-/// One step deeper than the brand violet: the list focus pill's fill (white clears 5.3:1 on it).
-const VIOLET_550: [f32; 4] = rgb8(0x6e, 0x4e, 0xe8);
+// Violet — the approved Stremio redesign reference color, used for actions and remote focus.
+const VIOLET_500: [f32; 4] = rgb8(0x77, 0x62, 0x94);
+/// The concept uses one violet for both action and focus; white clears 5.30:1 on this fill.
+const VIOLET_550: [f32; 4] = rgb8(0x77, 0x62, 0x94);
 
 // Atmosphere — deliberately dark light for a pre-content route. These are not state colours
 // and never ink a control; together they stand in for an artwork UltraBlur envelope before the
@@ -281,10 +282,8 @@ pub mod logo {
 }
 
 // ── Accent / control ─────────────────────────────────────────────────────────
-/// **The focus fill — and the only fill a control can light up with.** Stremio's violet
-/// (`VIOLET_500`, stremio-web `--primary-accent-color: rgb(123, 91, 245)`): what Stremio lights a
-/// selected nav tab, a toggle or a primary action with, and the one hue the app's identity rests
-/// on. It was `COOL_0`, the near-white [`TEXT_PRIMARY`] is, until the Stremio palette sync; a
+/// **The focus fill — and the only fill a control can light up with.** The approved redesign's
+/// violet (`#776294`): used for selected navigation, toggles, primary actions and remote focus. It was `COOL_0`, the near-white [`TEXT_PRIMARY`] is, until the Stremio palette sync; a
 /// focused poster still lights WHITE (the tile's lit-glass edge, `gfx::tokens::CARD_GLOW_*`), which
 /// is Stremio's own poster focus (`MetaItem` `box-shadow: 0 0 0 .2rem` primary foreground). A
 /// control lights up for exactly one reason — the remote is on it. Nothing is filled by RANK, so there is no
@@ -298,8 +297,8 @@ pub mod logo {
 /// control: the warm off-white is [`WASH_WARM`], a page ground; the cool plate is
 /// [`SURFACE_QR_PLATE`], a scan surface.
 pub const ACCENT: [f32; 4] = VIOLET_500;
-/// Ink/glyphs drawn over [`ACCENT`] — pure `WHITE`, the one ink that clears 4.5:1 on Stremio's
-/// violet (4.51:1; even `TEXT_PRIMARY`'s `#f7fafc` lands at 4.30). Pinned by
+/// Ink/glyphs drawn over [`ACCENT`] — pure `WHITE`, which clears 5.30:1 on the reference violet.
+/// Pinned by
 /// `widgets_control_face_tests::focus_ink_clears_4_5_on_every_focus_fill`. It was the near-black `NEUTRAL_950` over
 /// the old near-white fill.
 pub const ACCENT_INK: [f32; 4] = WHITE;
@@ -312,9 +311,8 @@ pub const AVATAR_FILLS: [[f32; 4]; 4] =
 /// Alias for [`ACCENT_INK`] read from the "ink over accent" intent. The one legitimate alias in this
 /// file: it is the same ROLE under a second name, not a second role that happens to share a stop.
 pub const INK_ON_ACCENT: [f32; 4] = ACCENT_INK;
-/// **A list's focus pill** (`TableView`'s sliding pill, a list row's focused face): the accent a
-/// step deeper, so a row's white title clears 5:1 and its secondary ink 3:1 on it (on the brand
-/// violet itself white sits at 4.51 and the old dark sub-ink well under 3). Still Stremio's purple.
+/// **A list's focus pill** (`TableView`'s sliding pill, a list row's focused face): the same
+/// reference violet as [`ACCENT`]. White titles clear 5:1; secondary ink is separately tested.
 pub const FOCUS_FILL: [f32; 4] = VIOLET_550;
 /// The SECONDARY ink over the accent (a focused row's source column, sub-line): white at the
 /// weight that clears 3:1 on [`FOCUS_FILL`].
@@ -388,10 +386,9 @@ pub const SEARCH_FIELD_GLOW: [f32; 4] = with_a(ACCENT, 0.55);
 /// still says what it is for from the couch.
 pub const SEARCH_PLACEHOLDER_INK: [f32; 4] = TEXT_SECONDARY;
 
-/// **The Detail page's stream panel** (stremio-web's `MetaDetails` streams column): the right-hand
-/// column of a Detail page stands on this dark ground, full height, so the stream list reads as a
-/// panel of its own over the full-bleed backdrop.
-pub const DETAIL_STREAM_PANEL: [f32; 4] = with_a(NEUTRAL_750, 0.86);
+/// **The Detail page's stream panel**: an opaque burgundy surface separates choices from the
+/// full-bleed artwork, while keeping secondary text above 4:1 contrast.
+pub const DETAIL_STREAM_PANEL: [f32; 4] = BURGUNDY_500;
 /// The stream panel's top-left corner radius.
 pub const DETAIL_STREAM_PANEL_RAD: f32 = 32.0;
 
@@ -938,7 +935,7 @@ pub const INK_ON_RESUME: [f32; 4] = NEUTRAL_850;
 // ── A list row's trailing VALUE read-out ─────────────────────────────────────
 /// The word at a row's trailing edge that says what it is SET to (`On`/`Off`, "English"), over the
 /// FOCUSED row's [`ACCENT`] pill. It was black at .60 over the old near-white pill, one step behind
-/// the label; over Stremio's violet nothing below pure white clears 4.5:1, so the value now takes
+/// the label; over the reference violet nothing below pure white clears 4.5:1, so the value now takes
 /// the label's own [`ACCENT_INK`] and the hierarchy is carried by position and size alone. Unfocused rows use
 /// [`TEXT_SECONDARY`] (and [`TEXT_TERTIARY`] when quietened), which need no token of their own,
 /// and [`ROW_VALUE_INK_DIM`] on a dim row.

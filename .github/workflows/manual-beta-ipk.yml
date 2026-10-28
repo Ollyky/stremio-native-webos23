@@ -1,0 +1,71 @@
+name: Manual Beta IPK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "build-ipk/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-beta-ipk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    # The webOS NDK is published for linux-aarch64; use the same runner as CI packaging.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: ndk
+        uses: ./.github/actions/webos-ndk
+
+      - name: Nightly with rust-src
+        run: rustup toolchain install nightly --profile minimal --component rust-src
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          key: package
+
+      - name: Restore the bundled FFmpeg
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: vendor/ffmpeg-prefix
+          key: ffmpeg-release-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci/build-ffmpeg.sh', 'ci/dependencies.json', 'ci/arm-cc.py') }}
+
+      - name: Build Beta IPK and checksum
+        env:
+          WEBOS_SDK: ${{ steps.ndk.outputs.sdk-dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          make RELEASE=1 FLAVOR=beta WEBOS_SDK="$WEBOS_SDK" ipk
+
+          shopt -s nullglob
+          ipks=(build/*.ipk)
+          if (( ${#ipks[@]} != 1 )); then
+            echo "::error::Expected exactly one IPK in build/, found ${#ipks[@]}"
+            printf 'Found: %s\n' "${ipks[@]}"
+            exit 1
+          fi
+
+          ipk="${ipks[0]}"
+          sha256sum "$ipk" | awk '{print $1}' > "$ipk.sha256"
+          test -s "$ipk"
+          test -s "$ipk.sha256"
+          printf 'Created package and checksum:\n%s\n%s\n' "$ipk" "$ipk.sha256"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stremionative-beta-ipk-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            build/*.ipk
+            build/*.ipk.sha256
+          if-no-files-found: error
