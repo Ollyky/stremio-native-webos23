@@ -1,0 +1,126 @@
+name: Publish tested Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful run ID of the Beta IPK workflow that produced the package you tested
+        required: true
+        type: string
+      tag:
+        description: Unique prerelease tag, for example v0.2.0-beta.1
+        required: true
+        type: string
+      tv_test_confirmation:
+        description: Type TV_TESTED_OK only after confirming this exact downloaded IPK works on the TV
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate the completed build and explicit TV confirmation
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          TAG: ${{ inputs.tag }}
+          TV_TEST_CONFIRMATION: ${{ inputs.tv_test_confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Build run ID must be numeric"; exit 1; }
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]] || { echo "::error::Tag must be a unique vX.Y.Z-beta.N prerelease"; exit 1; }
+          [[ "$TV_TEST_CONFIRMATION" == "TV_TESTED_OK" ]] || { echo "::error::TV confirmation is required; no release was published"; exit 1; }
+
+          run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID")
+          status=$(jq -r '.status' <<< "$run_json")
+          conclusion=$(jq -r '.conclusion' <<< "$run_json")
+          workflow=$(jq -r '.path' <<< "$run_json")
+          commit=$(jq -r '.head_sha' <<< "$run_json")
+          branch=$(jq -r '.head_branch' <<< "$run_json")
+          [[ "$status" == "completed" && "$conclusion" == "success" ]] || { echo "::error::The selected Beta build did not complete successfully"; exit 1; }
+          [[ "$workflow" == .github/workflows/beta-ipk.yml* ]] || { echo "::error::The selected run did not use the Beta IPK workflow"; exit 1; }
+          [[ "$branch" == codex/* || "$branch" == build-ipk/* ]] || { echo "::error::The selected run is not from a build branch"; exit 1; }
+
+          set +e
+          tag_response=$(gh api -i "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" 2>&1)
+          tag_status=$?
+          set -e
+          if [[ "$tag_status" -eq 0 ]]; then
+            echo "::error::$TAG already exists; choose a new tag"
+            exit 1
+          fi
+          [[ "$tag_response" == *"404"* ]] || { echo "::error::Could not safely verify that $TAG is unused"; exit 1; }
+
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "artifact=stremionative-beta-$commit" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Download the exact artifact from that run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ steps.build.outputs.artifact }}
+          run-id: ${{ inputs.build_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          path: dist
+      - name: Verify the tested package, checksum, commit, and version
+        env:
+          EXPECTED_COMMIT: ${{ steps.build.outputs.commit }}
+          TAG: ${{ steps.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ipks=(dist/*.ipk)
+          [[ ${#ipks[@]} -eq 1 && -f "${ipks[0]}" ]] || { echo "::error::Expected exactly one IPK in the selected artifact"; exit 1; }
+          ipk="${ipks[0]}"
+          meta=dist/BETA-BUILD.txt
+          checksum="${ipk}.sha256"
+          [[ -f "$meta" && -f "$checksum" ]] || { echo "::error::The artifact is missing build metadata or SHA-256"; exit 1; }
+          expected_sha=$(tr -d '\r\n' < "$checksum")
+          actual_sha=$(sha256sum "$ipk" | awk '{print $1}')
+          [[ "$expected_sha" =~ ^[a-fA-F0-9]{64}$ && "$actual_sha" == "$expected_sha" ]] || { echo "::error::IPK SHA-256 does not match the artifact checksum"; exit 1; }
+
+          value() { awk -F= -v key="$1" '$1 == key { print substr($0, index($0, "=") + 1); exit }' "$meta"; }
+          [[ "$(value flavor)" == "beta" ]] || { echo "::error::Artifact is not a Beta package"; exit 1; }
+          [[ "$(value commit)" == "$EXPECTED_COMMIT" ]] || { echo "::error::Artifact commit does not match the selected build run"; exit 1; }
+          [[ "$(value sha256)" == "$actual_sha" ]] || { echo "::error::Build metadata SHA-256 mismatch"; exit 1; }
+          app_id=$(value app_id)
+          [[ "$app_id" == *.beta ]] || { echo "::error::Artifact app ID is not the Beta identity"; exit 1; }
+          filename="${ipk##*/}"
+          prefix="${app_id}_"
+          [[ "$filename" == "${prefix}"*"_arm.ipk" ]] || { echo "::error::IPK filename does not match its recorded app ID"; exit 1; }
+          package_version="${filename#"$prefix"}"
+          package_version="${package_version%_arm.ipk}"
+          [[ "$(value package_version)" == "$package_version" ]] || { echo "::error::Recorded package version does not match the IPK filename"; exit 1; }
+          tag_base="${TAG#v}"
+          tag_base="${tag_base%-beta.*}"
+          [[ "$(value base_version)" == "$tag_base" ]] || { echo "::error::Tag base version does not match the built app version"; exit 1; }
+
+          {
+            echo "A prerelease Beta built from the previously tested artifact."
+            echo
+            echo "- Commit: `$EXPECTED_COMMIT`"
+            echo "- Package version: `$package_version`"
+            echo "- SHA-256: `$actual_sha`"
+            echo "- Limitations: prerelease build; manual TV validation was confirmed before publication."
+          } > dist/RELEASE-NOTES.md
+          echo "sha256=$actual_sha" >> "$GITHUB_OUTPUT"
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+      - name: Publish as a prerelease without rebuilding
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          name: StremioNative Beta ${{ steps.build.outputs.tag }}
+          tag_name: ${{ steps.build.outputs.tag }}
+          target_commitish: ${{ steps.build.outputs.commit }}
+          prerelease: true
+          generate_release_notes: true
+          body_path: dist/RELEASE-NOTES.md
+          append_body: true
+          files: |
+            dist/*.ipk
+            dist/*.ipk.sha256
+          fail_on_unmatched_files: true
