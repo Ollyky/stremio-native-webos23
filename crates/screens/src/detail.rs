@@ -637,40 +637,50 @@ pub fn stream_chips(f: &Facts) -> Vec<RowChip> {
         (!v.is_empty()).then(|| v.join(" \u{b7} "))
     };
     let mut out = Vec::new();
+    let mark = |mut chip: RowChip, origin: Option<stream_facts::FactOrigin>| {
+        if let Some(origin) = origin {
+            let evidence = match origin {
+                stream_facts::FactOrigin::AddonText => sn_ui::table::ChipEvidence::AddonText,
+                stream_facts::FactOrigin::StructuredHint => sn_ui::table::ChipEvidence::AddonHint,
+            };
+            chip = chip.evidence(evidence);
+        }
+        chip
+    };
     if f.live {
-        out.push(RowChip::new(msg::app_detail_stream_live()));
+        out.push(mark(RowChip::new(msg::app_detail_stream_live()), f.origins.live));
     }
     match f.cached {
-        Some(true) => out.push(RowChip::new(msg::app_detail_stream_cached()).icon(Icon::Bolt)),
-        Some(false) => out.push(RowChip::new(msg::app_detail_stream_uncached()).quiet()),
+        Some(true) => out.push(mark(RowChip::new(msg::app_detail_stream_cached()).icon(Icon::Bolt), f.origins.cached)),
+        Some(false) => out.push(mark(RowChip::new(msg::app_detail_stream_uncached()).quiet(), f.origins.cached)),
         None => {}
     }
     // the picture: the range leads (it is what a viewer chooses by), the codec follows it on the
     // same line as plain text, so the most telling word keeps its room when the line is short
     if let Some(t) = f.range.or(f.codec) {
-        out.push(RowChip::new(t).server().icon(Icon::Film));
+        out.push(mark(RowChip::new(t).server().icon(Icon::Film), if f.range.is_some() { f.origins.range } else { f.origins.codec }));
     }
     if let (Some(_), Some(c)) = (f.range, f.codec) {
-        out.push(RowChip::new(c).server());
+        out.push(mark(RowChip::new(c).server(), f.origins.codec));
     }
     if let Some(a) = &f.audio {
-        out.push(RowChip::new(a.clone()).server().icon(Icon::Audio));
+        out.push(mark(RowChip::new(a.clone()).server().icon(Icon::Audio), f.origins.audio));
     }
     if let Some(t) = dot(&[f.source, f.group.as_deref()]) {
-        out.push(RowChip::new(t).server().icon(Icon::Shield));
+        out.push(mark(RowChip::new(t).server().icon(Icon::Shield), f.origins.source.or(f.origins.group)));
     }
     if let Some(b) = f.size {
-        out.push(RowChip::new(sn_ui::fmt::bytes(i64::try_from(b).unwrap_or(i64::MAX), (1, 0, 0))).server().icon(Icon::Drive));
+        out.push(mark(RowChip::new(sn_ui::fmt::bytes(i64::try_from(b).unwrap_or(i64::MAX), (1, 0, 0))).server().icon(Icon::Drive), f.origins.size));
     }
     if !f.languages.is_empty() {
         let mut langs = f.languages.iter().take(CHIP_LANGUAGES).copied().collect::<Vec<_>>().join(" \u{b7} ");
         if f.languages.len() > CHIP_LANGUAGES {
             langs.push_str(&format!(" +{}", f.languages.len() - CHIP_LANGUAGES));
         }
-        out.push(RowChip::new(langs).server().icon(Icon::Globe));
+        out.push(mark(RowChip::new(langs).server().icon(Icon::Globe), f.origins.languages));
     }
     if let Some(n) = f.seeders {
-        out.push(RowChip::new(msg::app_detail_stream_seeders(i64::from(n))).server().icon(Icon::User));
+        out.push(mark(RowChip::new(msg::app_detail_stream_seeders(i64::from(n))).server().icon(Icon::User), f.origins.seeders));
     }
     out
 }
@@ -2878,6 +2888,20 @@ mod tests {
             [Some(Icon::Bolt), Some(Icon::Film), None, Some(Icon::Audio), Some(Icon::Shield), Some(Icon::Drive), Some(Icon::Globe), Some(Icon::User)],
             "every fact leads with its icon (the codec rides on the picture's)"
         );
+        let facts_chips = stream_chips(&f);
+        assert_eq!(facts_chips[1].evidence, Some(sn_ui::table::ChipEvidence::AddonText));
+        assert_eq!(facts_chips[5].evidence, Some(sn_ui::table::ChipEvidence::AddonText));
+    }
+
+    #[test]
+    fn a_structured_size_hint_is_marked_as_an_addon_hint() {
+        let mut s = http("Example", "Watch now", "https://example.com/hint");
+        s.behavior_hints.video_size = Some(2_000_000_000);
+        let facts = stream_facts::facts(&s);
+        let chips = stream_chips(&facts);
+        assert_eq!(chips.len(), 1);
+        assert_eq!(chips[0].evidence, Some(sn_ui::table::ChipEvidence::AddonHint));
+
     }
 
     /// The stream table fits at the page's width in every shipped language: the cache chips (app
