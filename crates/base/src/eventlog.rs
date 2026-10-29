@@ -481,8 +481,8 @@ mod log_sink_tests {
         }
 
         let mut sink = Sink::default();
-        write_log_line(&mut sink, "install: id=com.morpheus235.stremionative.debug").unwrap();
+        write_log_line(&mut sink, "install: id=web.stremio.native.app.debug").unwrap();
         assert_eq!(sink.calls, 1);
-        assert_eq!(sink.bytes, b"install: id=com.morpheus235.stremionative.debug\n");
+        assert_eq!(sink.bytes, b"install: id=web.stremio.native.app.debug\n");
     }
 }

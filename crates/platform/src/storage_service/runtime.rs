@@ -261,16 +261,16 @@ mod tests {
 
     #[test]
     fn beta_app_identity() {
-        assert_eq!(app_identity(Path::new("/media/developer/apps/usr/palm/services/com.morpheus235.stremionative.beta.storage/stremionative-storage")), Ok("com.morpheus235.stremionative.beta"));
+        assert_eq!(app_identity(Path::new("/media/developer/apps/usr/palm/services/web.stremio.native.app.beta.storage/stremionative-storage")), Ok("web.stremio.native.app.beta"));
     }
 
     #[test]
     fn rejects_foreign_or_malformed_install_paths() {
         for path in [
-            "/usr/palm/services/com.morpheus235.stremionative.typo.storage/stremionative-storage",
-            "/usr/palm/services/com.morpheus235.stremionative.beta/stremionative-storage",
-            "/usr/palm/applications/com.morpheus235.stremionative.beta.storage/stremionative-storage",
-            "/usr/palm/services/com.morpheus235.stremionative.beta.storage/other",
+            "/usr/palm/services/web.stremio.native.app.typo.storage/stremionative-storage",
+            "/usr/palm/services/web.stremio.native.app.beta/stremionative-storage",
+            "/usr/palm/applications/web.stremio.native.app.beta.storage/stremionative-storage",
+            "/usr/palm/services/web.stremio.native.app.beta.storage/other",
             "stremionative-storage",
         ] {
             assert_eq!(app_identity(Path::new(path)), Err(ErrorCode::Invalid));

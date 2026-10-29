@@ -368,7 +368,7 @@ impl Pref {
             Pref::SubtitlePosition => 0,
             Pref::SkipIntros => SKIP_BUTTON,
             Pref::DvProfile7 => 0,
-            Pref::SubtitleMode => SUBS_AUTO,
+            Pref::SubtitleMode => SUBS_OFF,
             Pref::NextEpisode => NEXT_SAME,
             Pref::ForcedFallback => 0,
             Pref::SubtitleColor | Pref::SubtitleBackground | Pref::SubtitleOutline | Pref::SubtitleOpacity => 0,
@@ -788,11 +788,13 @@ mod tests {
         let audio = [t("eng", false, true), t("ger", false, false)];
         let subs = [t("en", true, false), t("eng", false, false), t("de-DE", false, false), t("deu", true, false)];
         let file = SettingsStore::default();
-        assert_eq!(file.get(Pref::SubtitleMode), SUBS_AUTO, "subtitles default to Auto");
+        assert_eq!(file.get(Pref::SubtitleMode), SUBS_OFF, "subtitles default to Off");
+        assert_eq!(file.pick_tracks(&audio, &subs), Picked { audio: Some(0), subtitle: None });
+        let auto = file.clone().seeded(Pref::SubtitleMode, SUBS_AUTO);
         // audio follows the file (English, the app's language): Auto shows only a forced English track
-        assert_eq!(file.pick_tracks(&audio, &subs), Picked { audio: Some(0), subtitle: Some(0) });
+        assert_eq!(auto.pick_tracks(&audio, &subs), Picked { audio: Some(0), subtitle: Some(0) });
         // German audio first, German then English subtitles
-        let de = SettingsStore::default().with_languages(&codes(&["DE", "EN"]), &codes(&["DE", "EN"]), None);
+        let de = auto.with_languages(&codes(&["DE", "EN"]), &codes(&["DE", "EN"]), None);
         assert_eq!(de.pick_tracks(&audio, &subs), Picked { audio: Some(1), subtitle: Some(3) }, "Auto in the preferred audio: forced German");
         let on = de.clone().seeded(Pref::SubtitleMode, SUBS_ON);
         assert_eq!(on.pick_tracks(&audio, &subs).subtitle, Some(2), "On: the full German track, not the forced one");

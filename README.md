@@ -75,7 +75,7 @@ Status and plans: [docs/roadmap.md](docs/roadmap.md).
 ```sh
 rustup toolchain install nightly --component rust-src
 make setup-env                     # webOS NDK into ~/webos-ndk (or WEBOS_SDK=<sdk root>)
-make ipk                           # debug build: build/com.morpheus235.stremionative.debug_<ver>_arm.ipk
+make ipk                           # debug build: build/web.stremio.native.app.debug_<ver>_arm.ipk
 make RELEASE=1 FLAVOR=beta ipk     # StremioNative Beta, version X.Y.<UTC date>
 make RELEASE=1 FLAVOR=stable ipk   # what a release publishes
 ```
@@ -93,8 +93,10 @@ make check                         # host tests + packaging selftests
 ```
 
 Releases are cut by pushing a `vX.Y.Z` tag on `main` (a suffixed tag such as `v0.2.0-beta.1`
-publishes the Beta). CI builds and publishes the release; the Homebrew Channel repository is
-refreshed by hand for now. Details in [docs/roadmap.md](docs/roadmap.md#releases).
+publishes the Beta IPK as a GitHub prerelease). You can also run **Actions → Release** and enter
+that tag on the branch you want to publish; CI builds the Beta app and attaches the IPK and SHA-256
+to Releases. The Homebrew Channel repository is refreshed by hand for now. Details in
+[docs/roadmap.md](docs/roadmap.md#releases).
 
 ## Layout
 

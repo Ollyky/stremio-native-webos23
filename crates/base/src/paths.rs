@@ -57,14 +57,14 @@ pub const ENV_STEERABLE: bool = cfg!(feature = "hostsim");
 ///
 /// It is a FALLBACK and a comparison value — never the answer on its own. See [`app_id`]: which
 /// app this process is depends on where it was installed, not on what it was compiled with.
-pub const STABLE_APP_ID: &str = "com.morpheus235.stremionative";
+pub const STABLE_APP_ID: &str = "web.stremio.native.app";
 
 /// The Developer Mode install dir. Only a last-resort fallback now — it is what the app used to
 /// hardcode, so it keeps the historical behaviour if `/proc` is somehow unreadable.
-const LEGACY_APP_DIR: &str = "/media/developer/apps/usr/palm/applications/com.morpheus235.stremionative";
+const LEGACY_APP_DIR: &str = "/media/developer/apps/usr/palm/applications/web.stremio.native.app";
 
-/// **Which install this process is** — `com.morpheus235.stremionative` for the app users get, or
-/// `com.morpheus235.stremionative.<flavour>` for a developer build sitting beside it on the same television.
+/// **Which install this process is** — `web.stremio.native.app` for the app users get, or
+/// `web.stremio.native.app.<flavour>` for a developer build sitting beside it on the same television.
 ///
 /// Read from the INSTALL DIRECTORY, not compiled in, and that is the whole design.
 ///
@@ -124,7 +124,7 @@ fn installed_app_id(exe: &Path) -> Option<String> {
 }
 
 /// The flavour suffix of [`app_id`] — `None` for the app users get, `Some("debug")` for
-/// `com.morpheus235.stremionative.debug`.
+/// `web.stremio.native.app.debug`.
 ///
 /// One definition, so no caller has to know how a flavour is spelled. Everything that must differ
 /// between two installs on one television — the runtime root, the session file, the plex.tv device
@@ -770,21 +770,21 @@ mod tests {
     #[test]
     fn the_app_id_is_the_install_directory_and_only_a_real_one() {
         use std::path::Path;
-        let dev = "/media/developer/apps/usr/palm/applications/com.morpheus235.stremionative.debug/stremionative";
-        let hbc = "/media/cryptofs/apps/usr/palm/applications/com.morpheus235.stremionative/stremionative";
+        let dev = "/media/developer/apps/usr/palm/applications/web.stremio.native.app.debug/stremionative";
+        let hbc = "/media/cryptofs/apps/usr/palm/applications/web.stremio.native.app/stremionative";
         let beta =
-            "/media/developer/apps/usr/palm/applications/com.morpheus235.stremionative.beta/stremionative";
+            "/media/developer/apps/usr/palm/applications/web.stremio.native.app.beta/stremionative";
         assert_eq!(
             super::installed_app_id(Path::new(dev)).as_deref(),
-            Some("com.morpheus235.stremionative.debug")
+            Some("web.stremio.native.app.debug")
         );
         assert_eq!(
             super::installed_app_id(Path::new(hbc)).as_deref(),
-            Some("com.morpheus235.stremionative")
+            Some("web.stremio.native.app")
         );
         assert_eq!(
             super::installed_app_id(Path::new(beta)).as_deref(),
-            Some("com.morpheus235.stremionative.beta")
+            Some("web.stremio.native.app.beta")
         );
         // A host build: the parent is `debug`, whose parent is `target-sim` — not `applications`.
         // Without this arm the simulator would mint an app called `debug`, take `/tmp/debug` as its
@@ -815,13 +815,13 @@ mod tests {
             None
         );
         assert_eq!(
-            "com.morpheus235.stremionative.debug"
+            "web.stremio.native.app.debug"
                 .strip_prefix(super::STABLE_APP_ID)
                 .and_then(|r| r.strip_prefix('.')),
             Some("debug")
         );
         assert_eq!(
-            "com.morpheus235.stremionative.beta"
+            "web.stremio.native.app.beta"
                 .strip_prefix(super::STABLE_APP_ID)
                 .and_then(|r| r.strip_prefix('.')),
             Some("beta")
@@ -846,11 +846,11 @@ mod tests {
             return; // a host build answers from the environment first; this is the television rule
         }
         let stable = super::resolve_runtime_dir(None, None, super::STABLE_APP_ID);
-        let debug = super::resolve_runtime_dir(None, None, "com.morpheus235.stremionative.debug");
-        let beta = super::resolve_runtime_dir(None, None, "com.morpheus235.stremionative.beta");
+        let debug = super::resolve_runtime_dir(None, None, "web.stremio.native.app.debug");
+        let beta = super::resolve_runtime_dir(None, None, "web.stremio.native.app.beta");
         assert_eq!(stable, std::path::Path::new("/tmp"));
-        assert_eq!(debug, std::path::Path::new("/tmp/com.morpheus235.stremionative.debug"));
-        assert_eq!(beta, std::path::Path::new("/tmp/com.morpheus235.stremionative.beta"));
+        assert_eq!(debug, std::path::Path::new("/tmp/web.stremio.native.app.debug"));
+        assert_eq!(beta, std::path::Path::new("/tmp/web.stremio.native.app.beta"));
         assert_ne!(
             stable.join("stremionative-events.log"),
             debug.join("stremionative-events.log")
@@ -978,7 +978,7 @@ mod tests {
             ]
         };
         let a = named(super::STABLE_APP_ID);
-        let b = named("com.morpheus235.stremionative.debug");
+        let b = named("web.stremio.native.app.debug");
         assert!(
             a.iter().all(|p| !b.contains(p)),
             "{a:?} and {b:?} share a session file"

@@ -7,14 +7,15 @@
 # (FLAVOR=beta: its own app id, version X.Y.YYMMDDHHm: the UTC cut time, to ten minutes).
 # webOS versions are numeric, so the cut time is what orders betas: one per ten minutes.
 #
-# A release no longer refreshes the Homebrew Channel repository (hbrepo.yml): run that workflow by
-# hand on main when it should list the newest releases.
+# A manual run accepts a release tag from the selected branch; a tag push still must point into
+# main. A release no longer refreshes the Homebrew Channel repository (hbrepo.yml): run that
+# workflow by hand on main when it should list the newest releases.
 name: Release
 
 on:
   push:
     tags: ["v*"]
-  # The same release without pushing a tag first: run it on main with the tag to create, and the
+  # The same release without pushing a tag first: run it on the branch to publish with the tag to create, and the
   # publish step creates that tag at the commit this run built and tested.
   workflow_dispatch:
     inputs:
@@ -59,10 +60,23 @@ jobs:
           fi
           echo "version=$app" >> "$GITHUB_OUTPUT"
           if [ "$tag" != "$base" ]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
-      - name: The tag is on main
+      - name: The release commit is on its selected branch
         run: |
-          git fetch -q origin main
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$TAG is not on main"; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            case "$GITHUB_REF" in
+              refs/heads/*) branch="${GITHUB_REF#refs/heads/}" ;;
+              *) echo "::error::Choose a branch when running a release manually"; exit 1 ;;
+            esac
+            git fetch -q origin "refs/heads/$branch:refs/remotes/origin/$branch"
+            git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch" || {
+              echo "::error::$TAG is not on the selected branch ($branch)"; exit 1;
+            }
+          else
+            git fetch -q origin main
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+              echo "::error::$TAG is not on main"; exit 1;
+            }
+          fi
       - name: System libraries
         run: sudo apt-get update -q && sudo apt-get install -y -q libsdl2-dev libsdl2-ttf-dev libgl-dev
       - name: Tests
