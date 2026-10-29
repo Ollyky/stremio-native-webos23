@@ -2442,7 +2442,7 @@ fn row_value_ink(row: &Row, focused: bool) -> [f32; 4] {
 
 #[cfg(test)]
 mod tests {
-    /// The focused row's pill: its primary ink clears 4.5:1 with margin and its secondary ink 3:1
+    /// The focused row's pill: its primary and secondary inks clear 4.5:1
     /// (the stream row's source column, a list row's sub-line), on the violet that keeps Stremio's
     /// identity.
     #[test]
@@ -2457,7 +2457,7 @@ mod tests {
         let fill = theme::FOCUS_FILL;
         assert!(contrast(crate::ACCENT_INK, fill) >= 5.0, "primary {}", contrast(crate::ACCENT_INK, fill));
         let sec = over(theme::INK_ON_ACCENT_SECONDARY, fill);
-        assert!(contrast(sec, fill) >= 3.0, "secondary {}", contrast(sec, fill));
+        assert!(contrast(sec, fill) >= 4.5, "secondary {}", contrast(sec, fill));
         assert!(fill[2] > fill[0] && fill[2] > fill[1], "still the violet");
     }
 
