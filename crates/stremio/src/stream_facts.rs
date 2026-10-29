@@ -13,9 +13,47 @@
 
 use crate::types::{Playable, Stream};
 
+/// Where a parsed fact came from. This parser never reports player measurements; those belong to playback diagnostics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FactOrigin {
+    /// Parsed or inferred from free text supplied by the addon.
+    AddonText,
+    /// Read from a structured Stremio behavior hint.
+    StructuredHint,
+}
+
+/// Provenance for each fact shown in a stream row. Missing values have no origin.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FactOrigins {
+    /// Source of the live-stream hint.
+    pub live: Option<FactOrigin>,
+    /// Source of the displayed resolution.
+    pub resolution: Option<FactOrigin>,
+    /// Source of the HDR or Dolby Vision label.
+    pub range: Option<FactOrigin>,
+    /// Source of the codec label.
+    pub codec: Option<FactOrigin>,
+    /// Source of the audio-format label.
+    pub audio: Option<FactOrigin>,
+    /// Source of the release-source label.
+    pub source: Option<FactOrigin>,
+    /// Source of the size value.
+    pub size: Option<FactOrigin>,
+    /// Source of the seeder count.
+    pub seeders: Option<FactOrigin>,
+    /// Source of the language list.
+    pub languages: Option<FactOrigin>,
+    /// Source of the cache status.
+    pub cached: Option<FactOrigin>,
+    /// Source of the release-group label.
+    pub group: Option<FactOrigin>,
+}
+
 /// One stream's facts. Every field is `None`/empty when the text does not say.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Facts {
+    /// Origin of each displayed fact.
+    pub origins: FactOrigins,
     /// The release's own name: the stream's filename hint, else the first line of its title or
     /// description that says anything (emoji kept: they are the addon's own marks, TvVoo's
     /// "[🛰️] SKY 1"), else its name.
@@ -160,20 +198,44 @@ pub fn facts(s: &Stream) -> Facts {
         add(code);
     }
     let title = title(name, body, file);
+    let codec = first(CODECS);
+    let audio = (!audio.is_empty()).then(|| audio.join(" "));
+    let source = first(SOURCES);
+    let size_text = size(&lower);
+    let size_hint = s.behavior_hints.video_size.filter(|b| *b > 0);
+    let size_value = size_text.or(size_hint);
+    let seeders = seeders(&text);
+    let cached = cached(&lower);
+    let group = group(&text, &title);
+    let live = s.behavior_hints.is_live;
+    let origins = FactOrigins {
+        live: live.then_some(FactOrigin::StructuredHint),
+        resolution: resolution.map(|_| FactOrigin::AddonText),
+        range: range.map(|_| FactOrigin::AddonText),
+        codec: codec.map(|_| FactOrigin::AddonText),
+        audio: audio.as_ref().map(|_| FactOrigin::AddonText),
+        source: source.map(|_| FactOrigin::AddonText),
+        size: if size_text.is_some() { Some(FactOrigin::AddonText) } else { size_hint.map(|_| FactOrigin::StructuredHint) },
+        seeders: seeders.map(|_| FactOrigin::AddonText),
+        languages: (!languages.is_empty()).then_some(FactOrigin::AddonText),
+        cached: cached.map(|_| FactOrigin::AddonText),
+        group: group.as_ref().map(|_| FactOrigin::AddonText),
+    };
     Facts {
-        group: group(&text, &title),
+        origins,
+        group,
         title,
         name: lines(name).collect::<Vec<_>>().join("\n"),
-        live: s.behavior_hints.is_live,
+        live,
         resolution,
         range,
-        codec: first(CODECS),
-        audio: (!audio.is_empty()).then(|| audio.join(" ")),
-        source: first(SOURCES),
-        size: size(&lower).or(s.behavior_hints.video_size.filter(|b| *b > 0)),
-        seeders: seeders(&text),
+        codec,
+        audio,
+        source,
+        size: size_value,
+        seeders,
         languages,
-        cached: cached(&lower),
+        cached,
     }
 }
 
@@ -441,6 +503,28 @@ mod tests {
 
     fn stream(name: &str, title: &str) -> Stream {
         Stream { url: Some("https://example.com/s".into()), name: Some(name.into()), title: Some(title.into()), ..Default::default() }
+    }
+
+    #[test]
+    fn parsed_facts_keep_text_and_structured_hint_origins_separate() {
+        let mut s = stream("Torrentio\n1080p", "Film.2024.HEVC.4.2 GB");
+        s.behavior_hints.is_live = true;
+        s.behavior_hints.video_size = Some(7 << 30);
+        let f = facts(&s);
+        assert_eq!(f.origins.live, Some(FactOrigin::StructuredHint));
+        assert_eq!(f.origins.resolution, Some(FactOrigin::AddonText));
+        assert_eq!(f.origins.codec, Some(FactOrigin::AddonText));
+        assert_eq!(f.origins.size, Some(FactOrigin::AddonText), "text size wins over videoSize");
+        assert_eq!(f.size, Some((4.2 * (1u64 << 30) as f64) as u64));
+
+        let mut hinted = stream("Example", "Watch now");
+        hinted.behavior_hints.video_size = Some(2_000_000_000);
+        let h = facts(&hinted);
+        assert_eq!(h.origins.size, Some(FactOrigin::StructuredHint));
+        assert_eq!(h.origins.resolution, None);
+        assert_eq!(h.origins.languages, None);
+        let empty = facts(&stream("Example", "Watch now"));
+        assert_eq!(empty.origins, FactOrigins::default(), "missing metadata has no origin");
     }
 
     #[test]
