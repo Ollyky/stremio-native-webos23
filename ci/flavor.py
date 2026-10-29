@@ -5,8 +5,8 @@ Three installs of this app can live on one television, each with its own app id,
 sign-in and `/tmp` root (`crates/base/src/paths.rs` reads the id back from the install
 directory's name):
 
-  * `stable` — what users install (`com.morpheus235.stremionative`). Always a `RELEASE=1` build.
-  * `beta`   — the prerelease channel beside it (`…stremionative.beta`, tile "StremioNative Beta"),
+  * `stable` — what users install (`web.stremio.native.app`). Always a `RELEASE=1` build.
+  * `beta`   — the prerelease channel beside it (`web.stremio.native.app.beta`, tile "StremioNative Beta"),
                also always `RELEASE=1`. Its PACKAGE version is `X.Y.YYMMDDHHm`: the tracked `X.Y`
                with the UTC cut time (to ten minutes) as the patch, because Homebrew Channel offers
                an update only when the version string differs and webOS takes nothing but three

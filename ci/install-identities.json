@@ -1,17 +1,17 @@
 [
   {
     "name": "stable",
-    "app_id": "com.morpheus235.stremionative",
+    "app_id": "web.stremio.native.app",
     "object_id": "snstate.stable"
   },
   {
     "name": "debug",
-    "app_id": "com.morpheus235.stremionative.debug",
+    "app_id": "web.stremio.native.app.debug",
     "object_id": "snstate.debug"
   },
   {
     "name": "beta",
-    "app_id": "com.morpheus235.stremionative.beta",
+    "app_id": "web.stremio.native.app.beta",
     "object_id": "snstate.beta"
   }
 ]

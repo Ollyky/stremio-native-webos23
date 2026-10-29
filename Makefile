@@ -32,7 +32,7 @@ $(if $(filter $(FLAVOR),$(FLAVORS)),,$(error unknown FLAVOR "$(FLAVOR)" — one 
 
 # The id users get; ci/flavor.py's selftest holds it equal to ci/install-identities.json and
 # crates/base/src/paths.rs.
-APPID_STABLE := com.morpheus235.stremionative
+APPID_STABLE := web.stremio.native.app
 APPID := $(shell python3 ci/flavor.py $(FLAVOR))
 # A beta's package version carries its cut time; computed once per make run (UTC), exported so the
 # packager and the version the binary reports name the same cut.
@@ -102,7 +102,8 @@ LIBASS_DEFAULT_SO = vendor/libass-prefix/lib/libass-sn.so.0
 LIBASS_SO ?= $(LIBASS_DEFAULT_SO)
 
 # ---- the payload --------------------------------------------------------------------------------
-ICONDIR   = $(if $(filter stable,$(FLAVOR)),pkg,pkg/$(FLAVOR))
+ICON_FLAVOR = $(if $(filter beta,$(FLAVOR)),debug,$(FLAVOR))
+ICONDIR   = $(if $(filter stable,$(FLAVOR)),pkg,pkg/$(ICON_FLAVOR))
 ICONS     = $(ICONDIR)/icon.png $(ICONDIR)/largeIcon.png
 APP_FILES = $(ICONS) pkg/splash.png pkg/appfont.ttf pkg/appfont-bold.ttf pkg/appfont-cjk.ttf pkg/appfont-emoji.ttf pkg/OFL.txt \
             pkg/le-roots.pem LICENSE NOTICE

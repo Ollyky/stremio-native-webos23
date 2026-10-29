@@ -184,14 +184,14 @@ mod tests {
         let called = std::cell::Cell::new(false);
         for (path, id) in [
             (dir("com.evil"), "com.evil"),
-            (dir("com.morpheus235.stremionative.bad;id"), "com.morpheus235.stremionative.bad;id"),
+            (dir("web.stremio.native.app.bad;id"), "web.stremio.native.app.bad;id"),
             (
-                PathBuf::from("/tmp/com.morpheus235.stremionative"),
+                PathBuf::from("/tmp/web.stremio.native.app"),
                 sn_base::paths::STABLE_APP_ID,
             ),
             (
                 PathBuf::from(
-                    "/media/developer/apps/usr/palm/applications/com.morpheus235.stremionative.debug",
+                    "/media/developer/apps/usr/palm/applications/web.stremio.native.app.debug",
                 ),
                 sn_base::paths::STABLE_APP_ID,
             ),
@@ -214,11 +214,11 @@ mod tests {
 
     #[test]
     fn command_is_fixed_and_contains_the_only_validated_install_arguments() {
-        let id = "com.morpheus235.stremionative.debug-1";
+        let id = "web.stremio.native.app.debug-1";
         let c = command(&dir(id), id).unwrap();
-        assert!(c.contains("/usr/bin/jailer -t native -p '/media/developer/apps/usr/palm/applications/com.morpheus235.stremionative.debug-1' -i 'com.morpheus235.stremionative.debug-1' /bin/true"));
+        assert!(c.contains("/usr/bin/jailer -t native -p '/media/developer/apps/usr/palm/applications/web.stremio.native.app.debug-1' -i 'web.stremio.native.app.debug-1' /bin/true"));
         assert!(c.contains("id -u"));
         assert!(c.contains("[ ! -c /dev/rtkmem ]"));
-        assert!(c.contains("/var/palm/jail/com.morpheus235.stremionative.debug-1/dev/rtkmem"));
+        assert!(c.contains("/var/palm/jail/web.stremio.native.app.debug-1/dev/rtkmem"));
     }
 }

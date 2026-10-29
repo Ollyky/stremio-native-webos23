@@ -848,7 +848,7 @@ mod tests {
     fn fixture() -> Snapshot {
         Snapshot {
             seq: 1,
-            app_id: Identifier::new("com.morpheus235.stremionative"),
+            app_id: Identifier::new("web.stremio.native.app"),
             flavour: Identifier::new("stable"),
             version: Identifier::new("0.6.0"),
             uid: 6303,

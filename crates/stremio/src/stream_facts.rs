@@ -25,6 +25,10 @@ pub struct Facts {
     pub name: String,
     /// `behaviorHints.isLive`: a live stream.
     pub live: bool,
+    /// Episode notation a provider puts on its own title line (for example FrostStream's `T01·E01`).
+    pub episode: Option<String>,
+    /// The stream service/provider named on its own title line (for example `Neon` or `Azure`).
+    pub provider: Option<String>,
     /// "4K", "1440p", "1080p", "720p", "576p", "480p".
     pub resolution: Option<&'static str>,
     /// "DV", "HDR10+", "HDR".
@@ -85,7 +89,7 @@ const SOURCES: &[(&[&str], &str)] = &[
 const LANGUAGES: &[(&str, &str)] = &[
     ("english", "EN"), ("eng", "EN"), ("german", "DE"), ("ger", "DE"), ("deutsch", "DE"), ("french", "FR"),
     ("fre", "FR"), ("spanish", "ES"), ("spa", "ES"), ("latino", "ES"), ("italian", "IT"), ("ita", "IT"),
-    ("japanese", "JA"), ("jpn", "JA"), ("portuguese", "PT"), ("russian", "RU"), ("rus", "RU"), ("korean", "KO"),
+    ("japanese", "JA"), ("jpn", "JA"), ("portuguese", "PT"), ("português", "PT"), ("portugues", "PT"), ("russian", "RU"), ("rus", "RU"), ("korean", "KO"),
     ("hindi", "HI"), ("polish", "PL"), ("dutch", "NL"), ("turkish", "TR"), ("multi", "MULTI"),
     ("dual", "MULTI"),
 ];
@@ -165,6 +169,8 @@ pub fn facts(s: &Stream) -> Facts {
         title,
         name: lines(name).collect::<Vec<_>>().join("\n"),
         live: s.behavior_hints.is_live,
+        episode: tagged_value(body, "🥏"),
+        provider: tagged_value(body, "🌊"),
         resolution,
         range,
         codec: first(CODECS),
@@ -175,6 +181,17 @@ pub fn facts(s: &Stream) -> Facts {
         languages,
         cached: cached(&lower),
     }
+}
+
+/// A display value FrostStream marks with a leading emoji (`🥏 T01·E01`, `🌊 Neon`). The emoji is
+/// represented by the row's native icon; only the value is kept in the fact.
+fn tagged_value(text: &str, marker: &str) -> Option<String> {
+    lines(text).find_map(|line| {
+        line.strip_prefix(marker)
+            .map(|tail| tail.trim_start_matches(['\u{fe0f}', ' ']).trim())
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    })
 }
 
 /// Where `w` first stands as a word in `hay`: nothing alphanumeric before it, no letter after it

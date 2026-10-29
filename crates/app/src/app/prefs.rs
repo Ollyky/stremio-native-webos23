@@ -321,6 +321,7 @@ mod tests {
         assert_eq!(usize::from(Pref::SubtitlePosition.rungs()), SubtitlePosition::LADDER.len());
         assert_eq!(Pref::SubtitleSize.default_rung(), SubtitleSize::default().index());
         assert_eq!(Pref::SubtitlePosition.default_rung(), SubtitlePosition::default().index());
+        assert_eq!(Pref::SubtitleMode.default_rung(), sn_screens::stores::settings::SUBS_OFF);
         assert_eq!(usize::from(Pref::SkipIntros.rungs()), SkipIntros::LADDER.len());
         assert_eq!(SkipIntros::LADDER[usize::from(Pref::SkipIntros.default_rung())], SkipIntros::default());
         assert_eq!(usize::from(Pref::DvProfile7.rungs()), DvProfile7::LADDER.len());
@@ -504,6 +505,8 @@ mod tests {
         assert_eq!(s.languages(LangList::Streams), ["FR", "EN"]);
         assert!(!s.streams_follow_audio());
         assert_eq!(s.get(Pref::SubtitleMode), sn_screens::stores::settings::SUBS_ON);
+        std::fs::write(&path, br#"{"subtitle_mode":3}"#).unwrap();
+        assert_eq!(load(&path).settings.get(Pref::SubtitleMode), sn_screens::stores::settings::SUBS_AUTO, "an explicit saved Auto remains Auto");
         std::fs::write(&path, br#"{"stream_languages":0,"audio_language":0,"subtitle_language":0}"#).unwrap();
         let s = load(&path).settings;
         assert!(s.languages(LangList::Audio).is_empty() && s.languages(LangList::Subtitles).is_empty() && s.streams_follow_audio());
@@ -541,6 +544,7 @@ mod tests {
         let p = load(&partial);
         assert_eq!(p.settings.get(Pref::SubtitleSize), 4, "a known field is read, an unknown one ignored");
         assert_eq!(p.settings.get(Pref::SubtitlePosition), Pref::SubtitlePosition.default_rung());
+        assert_eq!(p.settings.get(Pref::SubtitleMode), sn_screens::stores::settings::SUBS_OFF, "a missing mode uses the new install default");
         assert_eq!(p.settings.get(Pref::MultichannelAudio), sn_screens::stores::settings::MULTI_AUTO, "an earlier file is Automatic");
         assert_eq!([Pref::AssStyling, Pref::AutoPlay].map(|x| p.settings.get(x)), [1, 1], "an earlier file keeps ASS styled and auto-play on");
     }

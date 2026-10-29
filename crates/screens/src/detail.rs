@@ -645,6 +645,9 @@ pub fn stream_chips(f: &Facts) -> Vec<RowChip> {
         Some(false) => out.push(RowChip::new(msg::app_detail_stream_uncached()).quiet()),
         None => {}
     }
+    if let Some(episode) = &f.episode {
+        out.push(RowChip::new(episode.clone()).server().icon(Icon::Film));
+    }
     // the picture: the range leads (it is what a viewer chooses by), the codec follows it on the
     // same line as plain text, so the most telling word keeps its room when the line is short
     if let Some(t) = f.range.or(f.codec) {
@@ -658,6 +661,9 @@ pub fn stream_chips(f: &Facts) -> Vec<RowChip> {
     }
     if let Some(t) = dot(&[f.source, f.group.as_deref()]) {
         out.push(RowChip::new(t).server().icon(Icon::Shield));
+    }
+    if let Some(provider) = &f.provider {
+        out.push(RowChip::new(provider.clone()).server().icon(Icon::Shield));
     }
     if let Some(b) = f.size {
         out.push(RowChip::new(sn_ui::fmt::bytes(i64::try_from(b).unwrap_or(i64::MAX), (1, 0, 0))).server().icon(Icon::Drive));
@@ -2878,6 +2884,38 @@ mod tests {
             [Some(Icon::Bolt), Some(Icon::Film), None, Some(Icon::Audio), Some(Icon::Shield), Some(Icon::Drive), Some(Icon::Globe), Some(Icon::User)],
             "every fact leads with its icon (the codec rides on the picture's)"
         );
+    }
+
+    #[test]
+    fn froststream_episode_provider_and_portuguese_survive_the_stream_row() {
+        let _en = sn_platform::i18n::language_on_this_thread_for_test(sn_platform::i18n::Preference::En);
+        let neon = http(
+            "FrostStream 720p",
+            "🎬 Under The Dome\n🥏 T01·E01\n🌊 Neon\n🌎 Português",
+            "https://example.invalid/neon",
+        );
+        let azure = http(
+            "FrostStream 720p",
+            "🎬 Under The Dome\n🥏 T01·E01\n🌊 Azure\n🌎 Português",
+            "https://example.invalid/azure",
+        );
+        let built = build(
+            &movie(),
+            None,
+            Some(&[group("FrostStream", GroupState::Ready(vec![neon, azure]))]),
+            None,
+            "",
+        );
+        assert_eq!(built.sections[0].rows.len(), 2);
+        let chips: Vec<Vec<&str>> = built.sections[0]
+            .rows
+            .iter()
+            .map(|row| row.chips.iter().map(|chip| chip.text.as_str()).collect())
+            .collect();
+        assert_eq!(chips[0], ["T01·E01", "Neon", "PT"]);
+        assert_eq!(chips[1], ["T01·E01", "Azure", "PT"]);
+        assert!(matches!(&built.actions[0], Some(Action::Play(req)) if req.url == "https://example.invalid/neon"));
+        assert!(matches!(&built.actions[1], Some(Action::Play(req)) if req.url == "https://example.invalid/azure"));
     }
 
     /// The stream table fits at the page's width in every shipped language: the cache chips (app

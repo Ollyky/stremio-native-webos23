@@ -12,7 +12,7 @@ the files that URL serves:
     <out>/<ipk name>                       the package itself (copied unless --ipk-url is given)
 
 Usage:
-    python3 ci/hbrepo.py --ipk build/com.morpheus235.stremionative_0.1.0_arm.ipk \\
+    python3 ci/hbrepo.py --ipk build/web.stremio.native.app_0.1.0_arm.ipk \\
         --base-url https://example.github.io/stremio-native --out _site
 
     python3 ci/hbrepo.py --selftest
@@ -167,25 +167,25 @@ def _fake_ipk(app_id: str, version: str) -> bytes:
 def selftest() -> int:
     tmp = tempfile.mkdtemp()
     try:
-        ipk = _fake_ipk("com.morpheus235.stremionative", "0.1.0")
-        path = os.path.join(tmp, "com.morpheus235.stremionative_0.1.0_arm.ipk")
+        ipk = _fake_ipk("web.stremio.native.app", "0.1.0")
+        path = os.path.join(tmp, "web.stremio.native.app_0.1.0_arm.ipk")
         with open(path, "wb") as f:
             f.write(ipk)
         files = build(path, "https://host.example/repo/", None, "https://host.example/repo/icon160.png")
         index = json.loads(files["repo.json"])
-        manifest = json.loads(files["com.morpheus235.stremionative.manifest.json"])
-        assert index["packages"][0]["manifestUrl"] == "https://host.example/repo/com.morpheus235.stremionative.manifest.json"
+        manifest = json.loads(files["web.stremio.native.app.manifest.json"])
+        assert index["packages"][0]["manifestUrl"] == "https://host.example/repo/web.stremio.native.app.manifest.json"
         assert manifest["version"] == "0.1.0", manifest
-        assert manifest["ipkUrl"] == "https://host.example/repo/com.morpheus235.stremionative_0.1.0_arm.ipk"
+        assert manifest["ipkUrl"] == "https://host.example/repo/web.stremio.native.app_0.1.0_arm.ipk"
         assert manifest["ipkHash"]["sha256"] == hashlib.sha256(ipk).hexdigest()
         assert manifest["ipkSize"] == len(ipk)
-        assert files["com.morpheus235.stremionative_0.1.0_arm.ipk"] == ipk
+        assert files["web.stremio.native.app_0.1.0_arm.ipk"] == ipk
         files = build(path, "https://host.example/repo", "https://dl.example/x.ipk", "https://i.example/i.png")
-        assert json.loads(files["com.morpheus235.stremionative.manifest.json"])["ipkUrl"] == "https://dl.example/x.ipk"
+        assert json.loads(files["web.stremio.native.app.manifest.json"])["ipkUrl"] == "https://dl.example/x.ipk"
         assert len(files) == 2, "an external ipk URL is not copied"
         files = build(path, "https://host.example/repo/beta", "https://dl.example/x.ipk", "https://i.example/i.png", "StremioNative Beta")
         assert json.loads(files["repo.json"])["packages"][0]["title"] == "StremioNative Beta"
-        beta_ipk = _fake_ipk("com.morpheus235.stremionative.beta", "0.2.20261016")
+        beta_ipk = _fake_ipk("web.stremio.native.app.beta", "0.2.20261016")
         beta_path = os.path.join(tmp, "beta.ipk")
         with open(beta_path, "wb") as f:
             f.write(beta_ipk)
@@ -199,10 +199,10 @@ def selftest() -> int:
         with open(os.path.join(out, "repo.json")) as f:
             merged = json.load(f)["packages"]
         assert [(p["id"], p["title"]) for p in merged] == [
-            ("com.morpheus235.stremionative", "StremioNative"),
-            ("com.morpheus235.stremionative.beta", "StremioNative Beta"),
+            ("web.stremio.native.app", "StremioNative"),
+            ("web.stremio.native.app.beta", "StremioNative Beta"),
         ], merged
-        assert os.path.exists(os.path.join(out, "com.morpheus235.stremionative.beta.manifest.json"))
+        assert os.path.exists(os.path.join(out, "web.stremio.native.app.beta.manifest.json"))
         try:
             control_of(b"not an archive")
             raise AssertionError("garbage accepted")
