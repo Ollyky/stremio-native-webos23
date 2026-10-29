@@ -46,6 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           case "$TAG" in v[0-9]*) ;; *) echo "::error::$TAG is not a vX.Y.Z tag"; exit 1 ;; esac
+          case "$TAG" in
+            *-*) echo "::error::Beta publication must use the tested-artifact workflow; this workflow rebuilds packages"; exit 1 ;;
+          esac
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             echo "::error::$TAG already exists; push it to release it, or pick a new tag"
             exit 1
