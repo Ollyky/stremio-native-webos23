@@ -316,9 +316,9 @@ pub const INK_ON_ACCENT: [f32; 4] = ACCENT_INK;
 /// step deeper, so a row's white title clears 5:1 and its secondary ink 3:1 on it (on the brand
 /// violet itself white sits at 4.51 and the old dark sub-ink well under 3). Still Stremio's purple.
 pub const FOCUS_FILL: [f32; 4] = VIOLET_550;
-/// The SECONDARY ink over the accent (a focused row's source column, sub-line): white at the
-/// weight that clears 3:1 on [`FOCUS_FILL`].
-pub const INK_ON_ACCENT_SECONDARY: [f32; 4] = with_a(WHITE, 0.78);
+/// The SECONDARY ink over the accent (a focused row's source column, sub-line): pure white,
+/// clearing 4.5:1 on [`FOCUS_FILL`] so metadata remains legible at distance.
+pub const INK_ON_ACCENT_SECONDARY: [f32; 4] = WHITE;
 // (`CONTROL_FOCUS_FACE_L` .972 / `CONTROL_FOCUS_AMBIENT_C` .36 stood here: a keyed focused face
 // was near-white material carrying the page's hue. Since the Stremio palette sync focus is the
 // fixed [`ACCENT`] violet on every ground, so the page's key reaches only the IDLE face.)
