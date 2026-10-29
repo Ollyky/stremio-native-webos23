@@ -17,7 +17,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  host-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: System libraries
+        run: sudo apt-get update -q && sudo apt-get install -y -q libsdl2-dev libsdl2-ttf-dev libgl-dev
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          key: beta-host-tests
+      - name: Tests
+        run: SNATIVE_RUNTIME_DIR=$(mktemp -d) cargo test --workspace --no-fail-fast
+      - name: Packaging tools
+        run: |
+          python3 -I ci/flavor.py --selftest
+          python3 -I ci/mkipk.py --selftest
+          python3 -I ci/hbrepo.py --selftest
+
   build:
+    needs: host-tests
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
