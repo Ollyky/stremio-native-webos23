@@ -103,9 +103,9 @@ jobs:
           {
             echo "A prerelease Beta built from the previously tested artifact."
             echo
-            echo "- Commit: `$EXPECTED_COMMIT`"
-            echo "- Package version: `$package_version`"
-            echo "- SHA-256: `$actual_sha`"
+            echo "- Commit: $EXPECTED_COMMIT"
+            echo "- Package version: $package_version"
+            echo "- SHA-256: $actual_sha"
             echo "- Limitations: prerelease build; manual TV validation was confirmed before publication."
           } > dist/RELEASE-NOTES.md
           echo "sha256=$actual_sha" >> "$GITHUB_OUTPUT"
