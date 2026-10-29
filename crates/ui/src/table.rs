@@ -55,19 +55,43 @@ pub enum Origin {
 /// One chip on a [`Row::chips`] line: a fact about the row ("4K", "HEVC", "DD+ 5.1"), drawn as the
 /// shared outlined badge. A `quiet` chip wears the row's sub-line ink instead of its label ink —
 /// a caveat ("Not cached — starts a download") rather than a feature.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChipEvidence {
+    /// Parsed or inferred from addon-provided text.
+    AddonText,
+    /// Explicitly supplied in structured addon metadata.
+    AddonHint,
+    /// Measured by the playback pipeline.
+    PlayerMeasurement,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Chip {
     pub text: String,
     pub quiet: bool,
     pub origin: Origin,
+    /// How the value was obtained, when known.
+    pub evidence: Option<ChipEvidence>,
     /// A leading glyph ([`Chip::icon`]): the chip then draws as an icon-led FACT LINE
     /// (`BadgeStyle::Bare`, no ground) unless it is quiet.
     pub icon: Option<crate::icons::Icon>,
 }
+fn chip_is_outlined(c: &Chip) -> bool {
+    c.evidence == Some(ChipEvidence::AddonHint)
+        || c.evidence == Some(ChipEvidence::PlayerMeasurement)
+        || c.quiet
+        || !(c.icon.is_some() || c.origin == Origin::Server)
+}
+
 impl Chip {
+    /// Attach the known source of this chip's value.
+    pub fn evidence(mut self, evidence: ChipEvidence) -> Self {
+        self.evidence = Some(evidence);
+        self
+    }
     /// An app-owned chip; [`Chip::server`] marks text the app parsed out of server text.
     pub fn new(text: impl Into<String>) -> Self {
-        Self { text: text.into(), quiet: false, origin: Origin::App, icon: None }
+        Self { text: text.into(), quiet: false, origin: Origin::App, evidence: None, icon: None }
     }
     /// Lead the chip with `i` (stremio-web's stream facts: 🎞 the picture, ♫ the sound, …).
     pub fn icon(mut self, i: crate::icons::Icon) -> Self {
@@ -2215,7 +2239,7 @@ impl TableView {
                         };
                         // a fact (an icon-led line, or server text riding on one) reads as text; an
                         // app chip without a glyph and a quiet caveat keep their outline
-                        let sty = if !c.quiet && (c.icon.is_some() || c.origin == Origin::Server) {
+                        let sty = if !chip_is_outlined(c) {
                             crate::widgets::BadgeStyle::Bare { col }
                         } else {
                             crate::widgets::BadgeStyle::Outlined { col, border: ring, bg: row_bg }
@@ -3115,6 +3139,16 @@ mod tests {
     /// A stream row whose chips overflow its line: at rest the tail gives way to "+N"; FOCUSED the
     /// row grows to show every chip, wrapped, and its whole title. Indices (and so keys) and the
     /// rows' order never change; moving focus away puts the row back to its resting height.
+    #[test]
+    fn addon_hint_chips_keep_a_shape_distinct_from_inferred_facts() {
+        let hint = Chip::new("2 GB").icon(crate::icons::Icon::Drive).evidence(ChipEvidence::AddonHint);
+        let inferred = Chip::new("4K").server().icon(crate::icons::Icon::Film).evidence(ChipEvidence::AddonText);
+        let measured = Chip::new("24 fps").evidence(ChipEvidence::PlayerMeasurement);
+        assert!(chip_is_outlined(&hint));
+        assert!(!chip_is_outlined(&inferred));
+        assert!(chip_is_outlined(&measured));
+    }
+
     #[test]
     fn a_focused_chip_row_grows_to_show_every_chip_and_shrinks_back() {
         use crate::fixture::FixtureMeasure;
